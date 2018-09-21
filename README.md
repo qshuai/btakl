@@ -1,7 +1,7 @@
 btalk
 ---
 
-btalk make you say any words what you want to say on blockchain. Aewsome!!!
+btalk make you say any words what you want to say on blockchain. Awesome!!!
 
 ### Installation:
 
