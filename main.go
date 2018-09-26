@@ -25,7 +25,7 @@ const (
 	// 10 satoshi/byte
 	feeRate = 10
 
-	defaultSignatrueSize = 107
+	defaultSignatureSize = 107
 
 	defaultSequence = 0xffffffff
 )
@@ -146,12 +146,12 @@ func assembleTx(utxo string, msgBytes []byte, pkScript []byte, wif *cashutil.WIF
 		}
 		tx.TxIn = append(tx.TxIn, &txIn)
 
-		actualFeeRate := value / float64(tx.SerializeSize()+defaultSignatrueSize*(i+1))
+		actualFeeRate := value / float64(tx.SerializeSize()+defaultSignatureSize*(i+1))
 		if actualFeeRate < feeRate {
 			continue
 		}
 
-		fee := (tx.SerializeSize() + defaultSignatrueSize*(i+1)) * feeRate
+		fee := (tx.SerializeSize() + defaultSignatureSize*(i+1)) * feeRate
 		redeemAmount := int(inputValue) - fee
 		tx.TxOut[0].Value = int64(redeemAmount)
 
