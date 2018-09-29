@@ -51,9 +51,10 @@ func main() {
 
 	utxo, err := getUnspent(base58Address, 1)
 	if err != nil {
-		fmt.Println(tcolor.WithColor(tcolor.Red, "Sorry, get utxo of the specified failed"))
+		fmt.Println(tcolor.WithColor(tcolor.Red, "Sorry, get utxo of the specified address failed"))
 		os.Exit(1)
 	}
+	fmt.Println(utxo)
 
 	scriptHash, err := getPkScriptHash(bech32Address)
 	if err != nil {

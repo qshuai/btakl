@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -22,6 +24,10 @@ func getBalance(addr string) (int64, error) {
 		return 0, err
 	}
 
+	if res.StatusCode != 200 {
+		return 0, errors.New("request failed")
+	}
+
 	content, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return 0, err
@@ -35,9 +41,14 @@ func getUnspent(addr string, page int) (string, error) {
 	url := bitcoinCashAPI + "/address/" + addr + "/unspent?pagesize=" +
 		strconv.Itoa(defaultPageSize) + "&page=" + strconv.Itoa(page)
 
+	fmt.Println(url)
 	res, err := http.Get(url)
 	if err != nil {
 		return "", err
+	}
+
+	if res.StatusCode != 200 {
+		return "", errors.New("request failed")
 	}
 
 	content, err := ioutil.ReadAll(res.Body)
