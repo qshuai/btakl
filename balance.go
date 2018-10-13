@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -41,7 +40,6 @@ func getUnspent(addr string, page int) (string, error) {
 	url := bitcoinCashAPI + "/address/" + addr + "/unspent?pagesize=" +
 		strconv.Itoa(defaultPageSize) + "&page=" + strconv.Itoa(page)
 
-	fmt.Println(url)
 	res, err := http.Get(url)
 	if err != nil {
 		return "", err
