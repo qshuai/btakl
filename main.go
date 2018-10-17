@@ -55,12 +55,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	scriptHash, err := getPkScriptHash(bech32Address)
+	pkScript, err := getPkScript(bech32Address)
 	if err != nil {
 		fmt.Println(tcolor.WithColor(tcolor.Red, "Please check your bech32 address"))
 		os.Exit(1)
 	}
-	pkScript := getP2pkhScript(scriptHash)
 
 	msg := args[1]
 	msgScript := txscript.NewScriptBuilder()
@@ -95,23 +94,13 @@ func main() {
 	fmt.Println("raw transaction:", tcolor.WithColor(tcolor.Green, hex.EncodeToString(buf.Bytes())))
 }
 
-func getPkScriptHash(address string) ([]byte, error) {
+func getPkScript(address string) ([]byte, error) {
 	addr, err := cashutil.DecodeAddress(address, &chaincfg.TestNet3Params)
 	if err != nil {
 		return nil, err
 	}
 
-	return addr.ScriptAddress(), nil
-}
-
-func getP2pkhScript(scriptHash []byte) []byte {
-	pkScript := txscript.NewScriptBuilder().AddOp(txscript.OP_DUP).AddOp(txscript.OP_HASH160).
-		AddData(scriptHash).AddOp(txscript.OP_EQUALVERIFY).AddOp(txscript.OP_CHECKSIG)
-
-	// ignore error because the specified address is checked
-	bs, _ := pkScript.Script()
-
-	return bs
+	return txscript.PayToAddrScript(addr)
 }
 
 func assembleTx(utxo string, msgBytes []byte, pkScript []byte, wif *cashutil.WIF) (*wire.MsgTx, error) {
