@@ -39,7 +39,7 @@ func main() {
 
 	balance, err := getBalance(base58Address)
 	if err != nil {
-		fmt.Println(tcolor.WithColor(tcolor.Red, "Sorry, get balance of the specified address failed"))
+		fmt.Println(tcolor.WithColor(tcolor.Red, "Sorry, get balance of the specified address failed: "+err.Error()))
 		os.Exit(1)
 	}
 
@@ -51,13 +51,13 @@ func main() {
 
 	utxo, err := getUnspent(base58Address, 1)
 	if err != nil {
-		fmt.Println(tcolor.WithColor(tcolor.Red, "Sorry, get utxo of the specified address failed"))
+		fmt.Println(tcolor.WithColor(tcolor.Red, "Sorry, get utxo of the specified address failed: "+err.Error()))
 		os.Exit(1)
 	}
 
 	pkScript, err := getPkScript(bech32Address)
 	if err != nil {
-		fmt.Println(tcolor.WithColor(tcolor.Red, "Please check your bech32 address"))
+		fmt.Println(tcolor.WithColor(tcolor.Red, "Please check your bech32 address: "+err.Error()))
 		os.Exit(1)
 	}
 
@@ -73,7 +73,7 @@ func main() {
 	// parse privkey
 	wif, err := cashutil.DecodeWIF(privkey)
 	if err != nil {
-		fmt.Println(tcolor.WithColor(tcolor.Red, "Privkey format error"))
+		fmt.Println(tcolor.WithColor(tcolor.Red, "Privkey format error: "+err.Error()))
 		os.Exit(1)
 	}
 
