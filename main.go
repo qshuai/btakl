@@ -6,21 +6,18 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bcext/cashutil"
-	"github.com/bcext/gcash/chaincfg"
-	"github.com/bcext/gcash/chaincfg/chainhash"
-	"github.com/bcext/gcash/txscript"
-	"github.com/bcext/gcash/wire"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
 	"github.com/qshuai/tcolor"
-	"github.com/tidwall/gjson"
 )
 
 const (
 	// address pair
-	bech32Address = "bchtest:qqwpvaha3leydercn7kckkuh9ufxaplcmsn48e8v3m"
-	base58Address = "mi5U8JnLMLiVrms3mW9YNvz5nSYC57Q7G9"
-
-	privkey = "cRL6HJZYSF1JMUSyP6PsKMRD9PhCS1acUSoKWh9p5Bf5iY4SPq5j"
+	base58Address = "mkYnutdmyXbTMk1QNgp3hcQa1pgGhXVY1S"
+	privkey = "cNRuBb89ZA9UskAp3GsNW8o4PPsRjD5wY1JnQWwe6iL8td2bDXN8"
 
 	// 1 satoshi/byte default
 	feeRate = 1
@@ -30,54 +27,53 @@ const (
 	defaultSequence = 0xffffffff
 )
 
+type utxo struct{
+	amount int64
+	txHash *chainhash.Hash
+	index int
+	pkScript []byte
+}
+
 func main() {
-	args := os.Args
-	if len(args) <= 1 {
-		fmt.Println(tcolor.WithColor(tcolor.Red, "Please a message needed to send"))
-		os.Exit(1)
-	}
-
-	balance, err := getBalance(base58Address)
-	if err != nil {
-		fmt.Println(tcolor.WithColor(tcolor.Red, "Sorry, get balance of the specified address failed: "+err.Error()))
-		os.Exit(1)
-	}
-
-	// unnecessary to create a transaction if balance is lower than 0.001 BCH
-	if balance < 100000 {
-		fmt.Println(tcolor.WithColor(tcolor.Red, "Sorry, your balance is insufficient"))
-		os.Exit(1)
-	}
-
-	utxo, err := getUnspent(base58Address, 1)
-	if err != nil {
-		fmt.Println(tcolor.WithColor(tcolor.Red, "Sorry, get utxo of the specified address failed: "+err.Error()))
-		os.Exit(1)
-	}
-
-	pkScript, err := getPkScript(bech32Address)
+	pkScript, err := getPkScript(base58Address)
 	if err != nil {
 		fmt.Println(tcolor.WithColor(tcolor.Red, "Please check your bech32 address: "+err.Error()))
 		os.Exit(1)
 	}
 
-	msg := args[1]
-	msgScript := txscript.NewScriptBuilder()
-	msgScript.AddOp(txscript.OP_RETURN).AddData([]byte(msg))
-	msgBytes, err := msgScript.Script()
+	// parse utxo
+	txHash, err := chainhash.NewHashFromStr("1cf2928ba8ad02199cf320af8f6322269cb6ed8057349e2ee91a015f9fb54ab1")
 	if err != nil {
-		fmt.Println(tcolor.WithColor(tcolor.Red, "Make OP_RETURN script error:"+err.Error()))
-		os.Exit(1)
+		panic(err)
 	}
 
+	var u utxo
+	u.txHash = txHash
+	u.pkScript = pkScript
+	u.amount = 110000
+	u.index = 0
+
 	// parse privkey
-	wif, err := cashutil.DecodeWIF(privkey)
+	wif, err := btcutil.DecodeWIF(privkey)
 	if err != nil {
 		fmt.Println(tcolor.WithColor(tcolor.Red, "Privkey format error: "+err.Error()))
 		os.Exit(1)
 	}
 
-	tx, err := assembleTx(utxo, msgBytes, pkScript, wif)
+	// payto a multisig address, format: address: public key : private key
+	// n1DEmZxGSa8yHvfSAYPtnMhb7MUsrjtsAE: 0334a8eb36d3add6a717cd1cde34f4cadc9e11154edecf2eb6f9bc50eee93ecf4c: cMxgWK5GhBfKFaqKzzrKnvCZQC8bZoo8ECHxmdo1gRFWAjgBJitv
+	// mnTSmXwSFLYkw2DBwVzkVwd6eKEa26EVAs: 033a7bbfe0c777f5d3d1d89cd1479add8746df0a010fb80baf192ab2cb247c25a1: cTNd5Tt2TmtKvTEWu1dmpzgNnKt97qcDt4acgdpWZb72Yyey9gNK
+	// mpuNzGVWEUXtMHpNngjwDkmzKwMTyhNH9W: 0386dbc13a9933a37103f1eb479c5a362eec91537c1361d8a34877a5576b3df5eb: cQdj8ZPBxHNfjsgqA6HRfXWMQhDaJMSRhNFPr77GQpYtAXzwZMr9
+	pk1, _ := hex.DecodeString("0334a8eb36d3add6a717cd1cde34f4cadc9e11154edecf2eb6f9bc50eee93ecf4c")
+	pk2, _ := hex.DecodeString("033a7bbfe0c777f5d3d1d89cd1479add8746df0a010fb80baf192ab2cb247c25a1")
+	pk3, _ := hex.DecodeString("0386dbc13a9933a37103f1eb479c5a362eec91537c1361d8a34877a5576b3df5eb")
+	builder := txscript.NewScriptBuilder()
+	script, err := builder.AddOp(txscript.OP_2).AddData(pk1).AddData(pk2).AddData(pk3).AddOp(txscript.OP_3).AddOp(txscript.OP_CHECKMULTISIG).Script()
+	if err != nil {
+		panic(err)
+	}
+
+	tx, err := assembleTx(u, script, pkScript, wif)
 	if err != nil {
 		fmt.Println(tcolor.WithColor(tcolor.Red, "Assemble transaction or sign error:"+err.Error()))
 		os.Exit(1)
@@ -95,7 +91,7 @@ func main() {
 }
 
 func getPkScript(address string) ([]byte, error) {
-	addr, err := cashutil.DecodeAddress(address, &chaincfg.TestNet3Params)
+	addr, err := btcutil.DecodeAddress(address, &chaincfg.TestNet3Params)
 	if err != nil {
 		return nil, err
 	}
@@ -103,50 +99,22 @@ func getPkScript(address string) ([]byte, error) {
 	return txscript.PayToAddrScript(addr)
 }
 
-func assembleTx(utxo string, msgBytes []byte, pkScript []byte, wif *cashutil.WIF) (*wire.MsgTx, error) {
+func assembleTx(u utxo, multisig []byte, pkScript []byte, wif *btcutil.WIF) (*wire.MsgTx, error) {
 	var tx wire.MsgTx
 	tx.Version = 1
 	tx.LockTime = 0
 
 	tx.TxOut = make([]*wire.TxOut, 2)
-	tx.TxOut[0] = &wire.TxOut{PkScript: pkScript}
-	tx.TxOut[1] = &wire.TxOut{PkScript: msgBytes, Value: 0}
+	// total: 1100000, spend: 100000, change: 900000, fee: 100000
+	tx.TxOut[0] = &wire.TxOut{PkScript: pkScript, Value: 900000}
+	tx.TxOut[1] = &wire.TxOut{PkScript: multisig, Value: 100000}
 
-	unspentList := gjson.Get(utxo, "data.list").Array()
-	var inputValue float64
-	var inputValueSlice []int64
-	for i := 0; i < len(unspentList); i++ {
-		// the coin value
-		value := unspentList[i].Get("value").Float()
-		if value <= 0 {
-			continue
-		}
-		inputValue += value
-		inputValueSlice = append(inputValueSlice, int64(value))
-
-		hashStr := unspentList[i].Get("tx_hash").String()
-		// ignore error because of trusting the API result
-		hash, _ := chainhash.NewHashFromStr(hashStr)
-		index := unspentList[i].Get("tx_output_n").Int()
-
-		txIn := wire.TxIn{
-			PreviousOutPoint: *wire.NewOutPoint(hash, uint32(index)),
-			Sequence:         defaultSequence,
-		}
-		tx.TxIn = append(tx.TxIn, &txIn)
-
-		actualFeeRate := inputValue / float64(tx.SerializeSize()+defaultSignatureSize*(i+1))
-		if actualFeeRate < feeRate {
-			continue
-		}
-
-		fee := (tx.SerializeSize() + defaultSignatureSize*(i+1)) * feeRate
-		redeemAmount := int(inputValue) - fee
-		tx.TxOut[0].Value = int64(redeemAmount)
-
-		break
+	txIn := wire.TxIn{
+		PreviousOutPoint: *wire.NewOutPoint(u.txHash, uint32(u.index)),
+		Sequence:         defaultSequence,
 	}
+	tx.TxIn = append(tx.TxIn, &txIn)
 
 	// sign the transaction
-	return sign(&tx, inputValueSlice, pkScript, wif)
+	return sign(&tx, 1100000, pkScript, wif)
 }

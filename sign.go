@@ -1,15 +1,14 @@
 package main
 
 import (
-	"github.com/bcext/cashutil"
-	"github.com/bcext/gcash/txscript"
-	"github.com/bcext/gcash/wire"
+	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
 )
 
-func sign(tx *wire.MsgTx, inputValueSlice []int64, pkScript []byte, wif *cashutil.WIF) (*wire.MsgTx, error) {
+func sign(tx *wire.MsgTx, inputValue int64, pkScript []byte, wif *btcutil.WIF) (*wire.MsgTx, error) {
 	for idx, _ := range tx.TxIn {
-		sig, err := txscript.RawTxInSignature(tx, idx, pkScript, cashutil.Amount(inputValueSlice[idx]),
-			txscript.SigHashAll|txscript.SigHashForkID, wif.PrivKey)
+		sig, err := txscript.RawTxInSignature(tx, idx, pkScript, txscript.SigHashAll, wif.PrivKey)
 		if err != nil {
 			return nil, err
 		}
@@ -24,8 +23,7 @@ func sign(tx *wire.MsgTx, inputValueSlice []int64, pkScript []byte, wif *cashuti
 		sig = append(sig, pk...)
 		tx.TxIn[0].SignatureScript = sig
 
-		engine, err := txscript.NewEngine(pkScript, tx, idx, txscript.StandardVerifyFlags,
-			nil, nil, inputValueSlice[idx])
+		engine, err := txscript.NewEngine(pkScript, tx, idx, txscript.StandardVerifyFlags, nil, nil, inputValue)
 		if err != nil {
 			return nil, err
 		}
